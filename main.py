@@ -19,16 +19,43 @@ def leerFile(filename):
 
 
 def calculoURT(particula):
-    return particula[3] - 2.5 * math.log(30 * particula[2])
+    raiz_taus_73 = 73 * taus ** 0.5
+    if raiz_taus_73 < 5:
+        return particula[3] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5)
+    elif raiz_taus_73 < 70:
+        return particula[3] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5 - 2.5 * math.log(1 + 0.3 * raiz_taus_73))
+    else:
+        return particula[3] - (2.5 * math.log(30 * particula[2]))
 
 
 def calculoVRT(particula):
-    return particula[4] - 2.5 * math.log(30 * particula[2])
+    raiz_taus_73 = 73 * taus ** 0.5
+    if raiz_taus_73 < 5:
+        return particula[4] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5)
+    elif raiz_taus_73 < 70:
+        return particula[4] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5 - 2.5 * math.log(1 + 0.3 * raiz_taus_73))
+    else:
+        return particula[4] - (2.5 * math.log(30 * particula[2]))
 
 
 def calculoWRT(particula):
-    return particula[5] - 2.5 * math.log(30 * particula[2])
+    raiz_taus_73 = 73 * taus ** 0.5
+    if raiz_taus_73 < 5:
+        return particula[5] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5)
+    elif raiz_taus_73 < 70:
+        return particula[5] - (2.5 * math.log(raiz_taus_73 * particula[2]) + 5.5 - 2.5 * math.log(1 + 0.3 * raiz_taus_73))
+    else:
+        return particula[5] - (2.5 * math.log(30 * particula[2]))
 
+
+def calculoUR2T(particula, cantidad):
+    raiz_taus_73 = 73 * taus ** 0.5
+    if raiz_taus_73 < 5:
+        return (2.5 * math.log(raiz_taus_73 * (particula[2] + cantidad)) + 5.5)
+    elif raiz_taus_73 < 70:
+        return (2.5 * math.log(raiz_taus_73 * (particula[2] + cantidad)) + 5.5 - 2.5 * math.log(1 + 0.3 * raiz_taus_73))
+    else:
+        return (2.5 * math.log(30 * (particula[2] + cantidad)))
 
 
 def fuerzasDrag(particula):
@@ -37,16 +64,18 @@ def fuerzasDrag(particula):
     wrt = calculoWRT(particula)
     urmt = (urt**2 + vrt**2 + wrt**2)**0.5
     rept = urmt * taus**0.5 * 73
-    cdt = 24 / (rept * (1 + 0.15 * rept + 0.017 * rept) - (0.208 / (1 + 10000 * rept**-0.5 )))
-    fuerzax = 0.75 * (1/(1 + R + 0.5)) * cdt * urt * urmt
-    fuerzay = 0.75 * (1 / (1 + R + 0.5)) * cdt * vrt * urmt
-    fuerzaz = 0.75 * (1 / (1 + R + 0.5)) * cdt * wrt * urmt
+    cdt = 24 / (rept * (1 + 0.15 * (rept**0.5) + 0.017 * rept) - (0.208 / (1 + 10000 * rept**-0.5 )))
+    fuerzai = -0.75 * (1/(1 + R + 0.5)) * cdt * urmt
+    fuerzax = fuerzai * urt
+    fuerzay = fuerzai * vrt
+    fuerzaz = fuerzai * wrt
     return [fuerzax, fuerzay, fuerzaz]
 
 
 def fuerzasSumergido():
-    fuerzax = (1/(1 + R + 0.5)) * math.sin(angulo) * (1/taus)
-    fuerzaz = (1/(1 + R + 0.5)) * math.cos(angulo) * (1/taus)
+    fuerzai = (1/(1 + R + 0.5))  * (1/taus)
+    fuerzax = fuerzai * math.sin(angulo)
+    fuerzaz = fuerzai * math.cos(angulo)
     return [fuerzax, fuerzaz]
 
 
@@ -57,11 +86,11 @@ def fuerzaMasaVirtual(particula):
 def fuerzaElevacion(particula):
     vrt = calculoVRT(particula)
     wrt = calculoWRT(particula)
-    uftop = 2.5 * math.log(30 * (particula[2] + 0.5))
-    ufbot = 2.5 * math.log(30 * (particula[2] - 0.5))
+    uftop = calculoUR2T(particula, 0.5)
+    ufbot = calculoUR2T(particula, -0.5)
     ur2tt = (particula[3] - uftop)**2 + vrt**2 + wrt**2
     ur2bt = (particula[3] - ufbot)**2 + vrt**2 + wrt**2
-    return 0.75 * (1/(1 + R + 0.5)) * cl * (ur2tt + ur2bt)
+    return 0.75 * (cl/(1 + R + 0.5)) * (ur2tt + ur2bt)
 
 
 data = leerFile("ejemplo1.txt")
@@ -117,7 +146,7 @@ while tiempoActual < tiempoT:
         fuerza1 = fuerzasDrag(particula)
         fuerza2 = fuerzasSumergido()
         fuerza3 = fuerzaMasaVirtual(particula)
-        #fuerza4 = fuerzaElevacion(particula)
+        fuerza4 = fuerzaElevacion(particula)
 
         particula[3] = particula[3] + deltaT * (fuerza1[0] + fuerza2[0] + fuerza3)
         particula[0] = particula[0] + particula[3] * deltaT
@@ -125,7 +154,7 @@ while tiempoActual < tiempoT:
         particula[4] = particula[4] + deltaT * (fuerza1[1])
         particula[1] = particula[1] + particula[4] * deltaT
 
-        particula[5] = particula[5] + deltaT * (fuerza1[2] + fuerza2[1]) # + fuerza4)
+        particula[5] = particula[5] + deltaT * (fuerza1[2] + fuerza2[1] + fuerza4)
         particula[2] = particula[2] + particula[5] * deltaT
         if particula[2] < 0.501:
             particula[5] = - particula[5]
@@ -137,7 +166,6 @@ while tiempoActual < tiempoT:
                 particula[3] = particula[5]/(math.tan(75))
             else:
                 particula[3] = particula[5] / (math.tan(anguloNuevo))
-
 
         numero_particula += 1
     iteracion += 1
